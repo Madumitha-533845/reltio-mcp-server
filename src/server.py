@@ -36,7 +36,7 @@ from src.tools.match import (
     get_potential_match_apis
 )
 from src.tools.relation import get_relation_details, create_relationships, delete_relation, get_entity_relations, search_relations
-from src.tools.search import search_entities
+from src.tools.search import search_entities, fun_fact
 from src.tools.system import list_capabilities, health_check
 from src.tools.tenant_config import (
     get_business_configuration,
@@ -52,7 +52,7 @@ from src.tools.tenant_config import (
 )
 from src.tools.activity import get_merge_activities, check_user_activity
 from src.tools.interaction import get_entity_interactions, create_interactions
-from src.tools.lookup import rdm_lookups_list
+from src.tools.lookup import rdm_lookups_list, get_all_lookups
 from src.tools.user import get_users_by_role_and_tenant, get_users_by_group
 from src.tools.workflow import (
     get_user_workflow_tasks,
@@ -178,6 +178,39 @@ async def search_entities_tool(filter: str, entity_type: str,
         select = f"uri,{select}"
     return await search_entities(filter, entity_type, tenant_id, min(max_results, 10), sort, order, select, options, activeness, offset)
     
+@mcp.tool()
+async def fun_fact_tool(tenant_id: str = RELTIO_TENANT) -> str:
+    """Search for fun facts about entities in the tenant
+         
+        Args:
+            tenant_id (str): Tenant ID for the Reltio environment. Defaults to RELTIO_TENANT env value.
+           
+        Returns:
+            A string containing the fun facts
+        
+        Examples:
+            # Find all fun facts in about the entities in the tenant
+            fun_fact_tool()
+        """
+    return await fun_fact(tenant_id)
+
+@mcp.tool()
+async def get_all_lookup_types(tenant_id: str = RELTIO_TENANT) -> dict:
+    """Search for all the lookup types available in the Reltio tenant
+
+        Args:
+            tenant_id (str): Tenant ID for the Reltio environment. Defaults to RELTIO_TENANT env value.
+
+        Returns:
+            A string containing the fun facts
+
+        Examples:
+            # Find all fun facts in about the entities in the tenant
+            fun_fact_tool()
+        """
+    return await get_all_lookups(tenant_id)
+
+
 @mcp.tool()
 async def get_entity_tool(entity_id: str, filter_field: Dict[str, List[str]] = None, tenant_id: str = RELTIO_TENANT) -> dict:
     """Get detailed information about a Reltio entity by ID

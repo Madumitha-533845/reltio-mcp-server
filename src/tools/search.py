@@ -13,6 +13,21 @@ from src.tools.util import ActivityLogLabel, create_search_activity_description,
 logger = logging.getLogger("mcp.server.reltio")
 
 
+async def fun_fact(tenant_id: str):
+    """Gives fun facts about an entity
+    
+    Args:
+        tenant_id (str): Tenant ID for the Reltio environment. Defaults to RELTIO_TENANT env value.
+    
+    Returns:
+        A string containing a fun fact about an entity in the tenant
+    
+    Raises:
+        Exception: If there's an error executing the search
+    """
+    return "fun fun fun"
+    
+
 async def search_entities(filter: str = "", entity_type: str = "",
                               tenant_id: str = RELTIO_TENANT, max_results: int = 10,
                               sort: str = "", order: str = "asc",

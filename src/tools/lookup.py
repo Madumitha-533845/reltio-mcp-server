@@ -16,6 +16,68 @@ from src.tools.util import ActivityLogLabel
 # Configure logging
 logger = logging.getLogger("mcp.server.reltio")
 
+"""Lists all lookups in the Reltio instance
+  
+  Args:
+      tenant_id (str): Tenant ID for the Reltio environment. Defaults to RELTIO_TENANT env value.
+  
+  Returns:
+      A dictionary containing the lookups list
+  
+  Raises:
+      Exception: If there's an error getting the lookups
+  """
+
+async def get_all_lookups(tenant_id : str = RELTIO_TENANT) -> dict:
+    # Construct URL with validated entity ID
+    url = get_reltio_url("lookups", "api", tenant_id)
+    #print(url)
+    try:
+        headers = get_reltio_headers()
+
+        # Validate connection security
+        validate_connection_security(url, headers)
+    except Exception as e:
+        logger.error(f"Authentication or security error: {str(e)}")
+        return create_error_response(
+            "AUTHENTICATION_ERROR",
+            "Failed to authenticate with Reltio API"
+        )
+    # Make the request with timeout
+    try:
+        #print("trying to get lookup values ")
+        lookup_vals = http_request(url=url, headers=headers)
+        #print(lookup_vals)
+    except Exception as e:
+        logger.error(f"API request error: {str(e)}")
+
+        # Check if it's a 404 error (entity not found)
+        if "404" in str(e):
+            return create_error_response(
+                "RESOURCE_NOT_FOUND",
+                f"Cannot retrieve the lookup types"
+            )
+
+        return create_error_response(
+            "SERVER_ERROR",
+            "Failed to retrieve lookup details from Reltio API"
+        )
+
+    # # Try to log activity for success
+    # try:
+    #     await ActivityLog.execute_and_log_activity(
+    #         tenant_id=tenant_id,
+    #         label=ActivityLogLabel.USER_PROFILE_VIEW.value,
+    #         client_type=ACTIVITY_CLIENT,
+    #         description=json.dumps({"uri":f"entities/{entity_id.split('/')[-1]}","label":entity.get("label","")}),
+    #         items=[{"objectUri":f"entities/{entity_id.split('/')[-1]}"}]
+    #     )
+    # except Exception as log_error:
+    #     logger.error(f"Activity logging failed for get_entity_details: {str(log_error)}")
+
+
+    return yaml.dump(lookup_vals, sort_keys=False)
+
 
 async def rdm_lookups_list(lookup_type: str, tenant_id: str = RELTIO_TENANT, max_results: int = 10,
                            display_name_prefix: str = "") -> dict:
@@ -102,6 +164,97 @@ async def rdm_lookups_list(lookup_type: str, tenant_id: str = RELTIO_TENANT, max
         # Log the error
         logger.error(f"Unexpected error in rdm_lookups_list: {str(e)}")
         
+        # Return a sanitized error response
+        return create_error_response(
+            "SERVER_ERROR",
+            "An unexpected error occurred while processing your request"
+        )
+
+async def rdm_lookups_list(lookup_type: str, tenant_id: str = RELTIO_TENANT, max_results: int = 10,
+                           display_name_prefix: str = "") -> dict:
+    """List lookups by RDM lookup type
+
+    Args:
+        lookup_type (str): RDM lookup type (e.g., 'rdm/lookupTypes/VistaVegetarianOrVegan')
+        tenant_id (str): Tenant ID for the Reltio environment. Defaults to RELTIO_TENANT env value.
+        max_results (int): Maximum number of results to return. Defaults to 10.
+        display_name_prefix (str): Display name prefix to filter by. Defaults to "".
+
+    Returns:
+        A dictionary containing the lookups list
+
+    Raises:
+        Exception: If there's an error getting the lookups
+    """
+    try:
+        # Validate and sanitize inputs using Pydantic model
+        try:
+            lookup_request = LookupListRequest(
+                lookup_type=lookup_type,
+                tenant_id=tenant_id,
+                max_results=max_results,
+                display_name_prefix=display_name_prefix
+            )
+        except ValueError as e:
+            logger.warning(f"Validation error in rdm_lookups_list: {str(e)}")
+            return create_error_response(
+                "VALIDATION_ERROR",
+                f"Invalid input parameters: {str(e)}"
+            )
+
+        # Construct URL for lookups list endpoint
+        url = get_reltio_url("lookups/list", "api", lookup_request.tenant_id)
+
+        try:
+            headers = get_reltio_headers()
+
+            # Validate connection security
+            validate_connection_security(url, headers)
+        except Exception as e:
+            logger.error(f"Authentication or security error: {str(e)}")
+            return create_error_response(
+                "AUTHENTICATION_ERROR",
+                "Failed to authenticate with Reltio API"
+            )
+
+        # Build the payload
+        payload = {
+            "type": lookup_request.lookup_type if lookup_request.lookup_type != "all" else "",
+            "max": lookup_request.max_results,
+            "displayNamePrefix": lookup_request.display_name_prefix
+        }
+
+        # Make the request with timeout
+        try:
+            result = http_request(url, method='POST', headers=headers, data=payload)
+        except Exception as e:
+            logger.error(f"API request error: {str(e)}")
+            return create_error_response(
+                "SERVER_ERROR",
+                "Failed to retrieve lookups from Reltio API"
+            )
+
+        try:
+            # Count the number of lookups returned
+            lookup_count = len(result) if isinstance(result, list) else 0
+            lookup_summary = f"{lookup_count} lookups found" if lookup_count > 0 else "no lookups found"
+
+            await ActivityLog.execute_and_log_activity(
+                tenant_id=tenant_id,
+                label=ActivityLogLabel.LOOKUP_LIST.value,
+                client_type=ACTIVITY_CLIENT,
+                description=f"rdm_lookups_list_tool : Successfully retrieved lookups: {lookup_summary} for lookup_type {lookup_type}"
+            )
+        except Exception as log_error:
+            logger.error(f"Activity logging failed for rdm_lookups_list: {str(log_error)}")
+
+        # Return the lookups in YAML format for better readability
+        return yaml.dump(result, sort_keys=False)
+
+    except Exception as e:
+        # Log the error
+        logger.error(f"Unexpected error in rdm_lookups_list: {str(e)}")
+
         # Return a sanitized error response
         return create_error_response(
             "SERVER_ERROR",
