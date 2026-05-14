@@ -15,7 +15,7 @@ from src.constants import (
     MAX_QUERY_LENGTH,
     RELATION_ID_PATTERN
 )
-from src.env import RELTIO_TENANT
+from src.env import RELTIO_TENANT, RDM_TENANT_ID
 from src.util.api import extract_entity_id, extract_relation_id, extract_change_request_id
 import re
 
@@ -848,6 +848,83 @@ class LookupListRequest(BaseModel):
         if not v.startswith('rdm/lookupTypes/'):
             raise ValueError("lookup_type must start with 'rdm/lookupTypes/'")
         return v
+
+class RdmLookupAddSourceMappingValue(BaseModel):
+    """Model for a single value within an RDM add source mapping"""
+    operation: Optional[str] = Field(
+        default=None,
+        description="Operation to perform on this source mapping value: 'ADD' to create/update or 'DELETE' to remove"
+    )
+    code: str = Field(..., description="Lookup code identifier in the source system (e.g., 'ShipTo')")
+    value: Optional[str] = Field(default=None, description="Display value for the code in the source system")
+    description: Optional[str] = Field(default=None, description="Description of the value")
+    enabled: bool = Field(default=True, description="Whether this mapping value is enabled")
+    canonicalValue: bool = Field(default=False, description="Whether this is the canonical value")
+    downStreamDefaultValue: bool = Field(default=False, description="Whether this is the downstream default value")
+
+
+class RdmLookupAddSourceMapping(BaseModel):
+    """Model for a source mapping in an RDM add lookup request"""
+    source: str = Field(..., description="Source system name (e.g., 'Reltio')")
+    values: List[RdmLookupAddSourceMappingValue] = Field(
+        ...,
+        min_length=1,
+        description="List of source mapping values"
+    )
+
+
+class RdmLookupAddEntry(BaseModel):
+    """Model for a single lookup entry to add via the RDM API"""
+    tenantId: str = Field(..., description="RDM tenant ID")
+    type: str = Field(..., description="Lookup type URI (e.g., 'rdm/lookupTypes/Country')")
+    code: str = Field(..., description="Lookup code value (e.g., 'US')")
+    label: Optional[str] = Field(default=None, description="Human-readable display label for this lookup entry (e.g., 'United States')")
+    enabled: bool = Field(default=True, description="Whether this lookup is enabled")
+    sourceMappings: Optional[List[RdmLookupAddSourceMapping]] = Field(
+        default=None,
+        description="Optional source mappings for this lookup entry. Each mapping links a source system (e.g., 'SAP') to one or more source-specific code values."
+    )
+    localizations: Optional[List[Any]] = Field(default_factory=list, description="Localizations list")
+    attributes: Optional[List[Any]] = Field(default_factory=list, description="Extra attributes list")
+
+    @field_validator('type')
+    @classmethod
+    def validate_type(cls, v: str) -> str:
+        if not v.startswith('rdm/lookupTypes/'):
+            raise ValueError("type must start with 'rdm/lookupTypes/'")
+        return v
+
+
+class RdmLookupAddRequest(BaseModel):
+    """Model for the RDM lookup add request"""
+    rdm_tenant: str = Field(
+        default=RDM_TENANT_ID,
+        description="RDM tenant ID used in the URL path"
+    )
+    lookup_type_short: str = Field(
+        ...,
+        description="Short lookup type name used in the URL (e.g., 'Country' from 'rdm/lookupTypes/Country')"
+    )
+    entries: List[RdmLookupAddEntry] = Field(
+        ...,
+        min_length=1,
+        description="List of lookup entries to add"
+    )
+
+    @field_validator('rdm_tenant')
+    @classmethod
+    def validate_rdm_tenant(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("rdm_tenant is required")
+        return v.strip()
+
+    @field_validator('lookup_type_short')
+    @classmethod
+    def validate_lookup_type_short(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("lookup_type_short is required")
+        return v.strip()
+
 
 class GetPossibleAssigneesRequest(BaseModel):
     """Model for getting possible assignees for workflow tasks"""

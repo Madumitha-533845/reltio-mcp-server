@@ -23,15 +23,13 @@ def get_access_token():
         response = requests.post(auth_url, headers=headers)
         response.raise_for_status()
         result = response.json()
-        print("my logs: ")
-        print(result)
         access_token = result['access_token']
         return access_token
     except requests.exceptions.RequestException as e:
         error_message = str(e)
         if hasattr(e, 'response') and e.response is not None:
             error_message = e.response.text
-        raise ValueError(f"Authentication failed: {error_message} token used {RELTIO_CLIENT_BASIC_TOKEN}")
+        raise ValueError(f"Authentication failed: {error_message}")
 
 def get_reltio_headers():
     """Get headers for Reltio API with auth token (using requests version)"""

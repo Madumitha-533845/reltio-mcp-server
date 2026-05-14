@@ -6,7 +6,7 @@ import requests
 from requests.exceptions import HTTPError
 
 from src.constants import ERROR_CODES, REQUIRE_TLS, ALLOWED_ORIGINS, DEFAULT_TIMEOUT
-from src.env import RELTIO_ENVIRONMENT
+from src.env import RELTIO_ENVIRONMENT, RDM_API_URL
 from src.util.auth import get_reltio_headers
 from src.util.exceptions import SecurityError, TimeoutError
 
@@ -16,6 +16,14 @@ logger = logging.getLogger("mcp.server.reltio")
 def get_reltio_url(path: str, partial_path: str, tenant: str):
     """Build a Reltio API URL"""
     return f"https://{RELTIO_ENVIRONMENT}.reltio.com/reltio/{partial_path}/{tenant}/{path}"
+
+def get_rdm_url(path: str, rdm_tenant: str) -> str:
+    """Build an RDM API URL"""
+    return f"{RDM_API_URL}/lookups/{rdm_tenant}/{path}"
+
+def get_rdm_config_url(rdm_tenant: str) -> str:
+    """Build an RDM Config API URL to retrieve tenant configuration including lookup types"""
+    return f"{RDM_API_URL}/configuration/{rdm_tenant}"
 
 def get_reltio_export_job_url(path: str, tenant: str):
     """Build a Reltio Export Job API URL"""

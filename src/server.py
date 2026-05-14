@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Optional
 from mcp.server.fastmcp import FastMCP
 
 # Import server name from defines
-from src.env import RELTIO_SERVER_NAME, RELTIO_TENANT
+from src.env import RELTIO_SERVER_NAME, RELTIO_TENANT, RDM_TENANT_ID
 # Import tools from separate modules
 from src.tools.entity import (
     get_entity_details, 
@@ -36,7 +36,7 @@ from src.tools.match import (
     get_potential_match_apis
 )
 from src.tools.relation import get_relation_details, create_relationships, delete_relation, get_entity_relations, search_relations
-from src.tools.search import search_entities, fun_fact
+from src.tools.search import search_entities
 from src.tools.system import list_capabilities, health_check
 from src.tools.tenant_config import (
     get_business_configuration,
@@ -52,7 +52,7 @@ from src.tools.tenant_config import (
 )
 from src.tools.activity import get_merge_activities, check_user_activity
 from src.tools.interaction import get_entity_interactions, create_interactions
-from src.tools.lookup import rdm_lookups_list, get_all_lookups
+from src.tools.lookup import rdm_lookups_list, rdm_lookups_add
 from src.tools.user import get_users_by_role_and_tenant, get_users_by_group
 from src.tools.workflow import (
     get_user_workflow_tasks,
@@ -1899,6 +1899,121 @@ async def rdm_lookups_list_tool(lookup_type: str, tenant_id: str = RELTIO_TENANT
         rdm_lookups_list_tool("rdm/lookupTypes/CurrencyCode")
     """
     return await rdm_lookups_list(lookup_type, tenant_id, max_results, display_name_prefix)
+
+@mcp.tool()
+async def rdm_lookups_add_tool(
+    entries: List[Dict[str, Any]],
+    tenant_id: str = RDM_TENANT_ID
+) -> dict:
+    """Add one or more lookup values to an RDM lookup type in a single API call.
+
+    IMPORTANT — BULK SUPPORT: The RDM API natively accepts multiple entries in one
+    request. Always batch all lookup entries for the same lookup type into a single
+    call instead of looping and calling this tool once per row. When processing a
+    spreadsheet or a list of values, collect ALL rows first, then call this tool once
+    with the full list.
+
+    Use this tool when the user asks to create or import lookup values into a specific
+    RDM lookup type (e.g., adding country codes, address types, etc.).
+
+    Prerequisites — ask the user if unknown:
+    - The lookup type (e.g., 'rdm/lookupTypes/AddressTypes')
+    - The RDM tenant ID (check environment context first; ask only if unavailable)
+
+    Args:
+        entries (List[Dict[str, Any]]): One or more lookup entry objects to create.
+            All entries in a single call MUST belong to the same lookup type (the
+            URL path is derived from the first entry's 'type' field).
+
+            Each entry supports:
+                - tenantId (str, required): RDM tenant ID (e.g., 'ndZmT8187MY7L0L').
+                - type (str, required): Full lookup type URI,
+                    e.g., 'rdm/lookupTypes/AddressTypes'.
+                - code (str, required): Canonical lookup code (e.g., 'ShipTo').
+                - label (str, optional): Human-readable display label
+                    (e.g., 'Shipping Address').
+                - enabled (bool, optional): Defaults to True.
+                - sourceMappings (List[Dict], optional): Source system mappings.
+                    Each mapping:
+                        - source (str): Source system name (e.g., 'SAP').
+                        - values (List[Dict]): Source-specific values, each with:
+                            - operation (str): 'ADD' or 'DELETE'.
+                            - code (str): Source code.
+                            - value (str): Source display value.
+                            - enabled (bool)
+                            - canonicalValue (bool)
+                            - downStreamDefaultValue (bool)
+
+        tenant_id (str): RDM tenant ID for URL routing and activity logging.
+            Defaults to the RDM_TENANT_ID environment variable.
+
+    Returns:
+        A YAML-formatted string with the API response for all created entries.
+
+    Examples:
+        # Add a single lookup code
+        rdm_lookups_add_tool(
+            entries=[{
+                "tenantId": "ndZmT8187MY7L0L",
+                "type": "rdm/lookupTypes/Country",
+                "code": "US",
+                "label": "United States",
+                "enabled": True
+            }]
+        )
+
+        # Add multiple entries in ONE call (preferred — avoids round-trips)
+        rdm_lookups_add_tool(
+            entries=[
+                {
+                    "tenantId": "ndZmT8187MY7L0L",
+                    "type": "rdm/lookupTypes/AddressTypes",
+                    "code": "ShipTo",
+                    "label": "Shipping Address",
+                    "enabled": True,
+                    "sourceMappings": [
+                        {
+                            "source": "SAP",
+                            "values": [
+                                {
+                                    "operation": "ADD",
+                                    "code": "ShipTo",
+                                    "value": "Shipping To",
+                                    "enabled": True,
+                                    "canonicalValue": True,
+                                    "downStreamDefaultValue": True
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "tenantId": "ndZmT8187MY7L0L",
+                    "type": "rdm/lookupTypes/AddressTypes",
+                    "code": "ReturnTo",
+                    "label": "Returning Address",
+                    "enabled": True,
+                    "sourceMappings": [
+                        {
+                            "source": "SAP",
+                            "values": [
+                                {
+                                    "operation": "ADD",
+                                    "code": "returnTo",
+                                    "value": "Returning To",
+                                    "enabled": True,
+                                    "canonicalValue": True,
+                                    "downStreamDefaultValue": True
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        )
+    """
+    return await rdm_lookups_add(entries, tenant_id)
+
 
 # ============================================================================
 # NEW USER TOOLS

@@ -187,6 +187,11 @@ async def list_capabilities() -> dict:
                     "parameters": ["lookup_type", "tenant_id", "max_results", "display_name_prefix"]
                 },
                 {
+                    "name": "rdm_lookup_types_list_tool",
+                    "description": "List all available lookup types in the RDM tenant",
+                    "parameters": ["rdm_tenant", "tenant_id"]
+                },
+                {
                     "name": "get_users_by_role_and_tenant_tool",
                     "description": "Get users by role and tenant",
                     "parameters": ["role", "tenant_id"]
@@ -292,6 +297,7 @@ async def list_capabilities() -> dict:
                 "get_entity_interactions_tool(entity_id='entity_id', max=50, offset=0)",
                 "create_interaction_tool(interactions=[{'type': 'configuration/interactionTypes/Email', 'attributes': {'DateEmailSent': [{'value': '2025-01-02'}]}, 'members': {'Individual': {'type': 'configuration/interactionTypes/Email/memberTypes/Individual', 'members': [{'objectURI': 'entities/0U3rzjF'}]}}}])",
                 "rdm_lookups_list_tool(lookup_type='rdm/lookupTypes/CountryCode', tenant_id='tenant_id', max_results=10)",
+                "rdm_lookup_types_list_tool(rdm_tenant='myRdmTenant')",
                 "get_users_by_role_and_tenant_tool(role='ROLE_REVIEWER', tenant_id='tenant_id')",
                 "get_users_by_group_and_tenant_tool(group='GROUP_LOCAL_RO_ALL', tenant_id='tenant_id')",
                 "get_user_workflow_tasks_tool(assignee='user.name', tenant_id='tenant_id', offset=0, max_results=10)",

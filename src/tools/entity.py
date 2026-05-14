@@ -98,7 +98,7 @@ async def get_entity_details(entity_id: str, filter_field: Dict[str, List[str]] 
         
         # Make the request with timeout
         try:
-            entity = http_request(url=url, headers=headers)
+            entity = http_request(url, headers=headers)
         except Exception as e:
             logger.error(f"API request error: {str(e)}")
             
